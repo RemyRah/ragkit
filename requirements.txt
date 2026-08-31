@@ -1,0 +1,5 @@
+# ragkit runs with ZERO dependencies for retrieval (pure standard library).
+# These are optional, only needed for the extras noted below.
+
+anthropic>=0.40    # optional: Claude-synthesized answers (needs ANTHROPIC_API_KEY)
+pytest>=8.0        # optional: running the test suite
