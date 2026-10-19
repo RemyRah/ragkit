@@ -29,7 +29,10 @@ def _read_pdf(path: Path) -> str:
         from pypdf import PdfReader
     except ImportError:
         raise MissingExtra("pypdf") from None
-    return "\n\n".join((page.extract_text() or "") for page in PdfReader(path).pages)
+    # PDFs carry no Markdown headings, so tag each page — citations then read
+    # "page 2" instead of an opaque chunk number.
+    pages = PdfReader(path).pages
+    return "\n\n".join(f"# Page {i}\n\n{page.extract_text() or ''}" for i, page in enumerate(pages, 1))
 
 
 def _read_docx(path: Path) -> str:

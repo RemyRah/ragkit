@@ -41,3 +41,10 @@ def test_missing_extra_skips_with_warning(tmp_path, monkeypatch, capsys):
     err = capsys.readouterr().err
     assert "pip install pypdf" in err
     assert err.count("\n") == 1  # one line, not one per file spam
+
+
+def test_pdf_chunks_cite_page_numbers():
+    pytest.importorskip("pypdf")
+    from ragkit import chunk_documents
+    chunks = chunk_documents(load_docs(SHOP / "brewing-guide.pdf"))
+    assert chunks and all(c.heading.startswith("Page ") for c in chunks)
