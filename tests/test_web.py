@@ -58,7 +58,7 @@ def test_page_serves_and_escapes_title(server):
 def test_ask_returns_passages_and_sources_without_key(server):
     data = _ask(server, {"question": "can I get my money back?"})
     assert data["answer"] is None
-    assert "ANTHROPIC_API_KEY" in data["note"]
+    assert "No language model connected" in data["note"]
     assert data["sources"][0]["citation"].startswith("policy")
     assert "refund" in data["sources"][0]["text"].lower()
 
