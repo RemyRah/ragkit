@@ -15,8 +15,8 @@ SHOP = Path(__file__).resolve().parents[1] / "sample_docs" / "shop"
 
 def test_pdf_ingest_extracts_text():
     pytest.importorskip("pypdf")
-    docs = load_docs(SHOP / "shipping-policy.pdf")
-    assert docs and "ship" in docs[0].text.lower()
+    docs = load_docs(SHOP / "brewing-guide.pdf")
+    assert docs and "cold brew" in docs[0].text.lower()
 
 
 def test_docx_ingest_extracts_text(tmp_path):

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Regenerate sample_docs/shop/shipping-policy.pdf with only the standard library.
+"""Regenerate sample_docs/shop/brewing-guide.pdf with only the standard library.
 
 A real (if minimal) PDF: one Helvetica page per section group, text drawn with
 plain PDF operators, and a correct xref table so any reader opens it.
 
-    python scripts/make_shipping_pdf.py
+    python scripts/make_sample_pdf.py
 """
 
 from __future__ import annotations
@@ -12,27 +12,27 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parents[1] / "sample_docs" / "shop" / "shipping-policy.pdf"
+OUT = Path(__file__).resolve().parents[1] / "sample_docs" / "shop" / "brewing-guide.pdf"
 
 SECTIONS = [
-    ("Shipping Policy", [
+    ("Brewing Guide", [
         "Ember & Oak Coffee Roasters is a fictional shop used as ragkit demo data.",
     ]),
-    ("Processing time", [
-        "We roast on Monday, Wednesday and Friday. Orders placed before 10am Eastern "
-        "ship the same roast day. Other orders ship on the next roast day.",
+    ("Pour-over", [
+        "Use 22 grams of medium-fine coffee for 350 grams of water at 94C (200F). "
+        "Bloom with 50 grams of water for 40 seconds, then pour slowly. Total brew time 3 minutes.",
     ]),
-    ("Rates and free shipping", [
-        "Standard shipping in the US is a flat $5.95 and takes 3 to 5 business days. "
-        "Orders of $40 or more ship free. Express shipping is $14 and takes 1 to 2 business days.",
+    ("French press", [
+        "Use 30 grams of coarse coffee for 500 grams of water just off the boil. "
+        "Steep 4 minutes, stir, skim the crust, then press gently and serve right away.",
     ]),
-    ("International shipping", [
-        "We ship to Canada and the UK for a flat $18. Delivery takes 7 to 14 business days. "
-        "Customs duties and import taxes are paid by the customer.",
+    ("Espresso", [
+        "Dose 18 grams of fine coffee and pull about 36 grams of espresso in 25 to 30 seconds. "
+        "Midnight Espresso is roasted for this; rest the beans 7 days after roasting first.",
     ]),
-    ("Tracking", [
-        "You get a tracking number by email as soon as your order ships. "
-        "If tracking shows no movement for 10 days, contact us and we will reship or refund.",
+    ("Cold brew", [
+        "Mix 100 grams of coarse coffee with 1 litre of cold water and steep 16 hours in the fridge. "
+        "Strain and dilute 1 to 1 with water or milk. Sunrise Blend is our favourite for cold brew.",
     ]),
 ]
 
