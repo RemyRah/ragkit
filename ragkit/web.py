@@ -113,6 +113,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Chat with your docs in the browser.")
     parser.add_argument("--docs", default="sample_docs/shop", help="File or folder of docs to index.")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--host", default="127.0.0.1", help="Bind address (0.0.0.0 to serve beyond this machine).")
     parser.add_argument("--title", default=None, help="Heading shown on the page.")
     args = parser.parse_args(argv)
 
@@ -121,8 +122,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"No readable documents found under {args.docs!r}.", file=sys.stderr)
         return 1
     title = args.title or f"Ask {Path(args.docs).name}"
-    server = make_server(Retriever(chunk_documents(docs)), title=title, port=args.port)
-    print(f"ragkit: {len(docs)} documents indexed. Open http://127.0.0.1:{server.server_address[1]}", flush=True)
+    server = make_server(Retriever(chunk_documents(docs)), title=title, host=args.host, port=args.port)
+    print(f"ragkit: {len(docs)} documents indexed. Open http://{args.host}:{server.server_address[1]}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
