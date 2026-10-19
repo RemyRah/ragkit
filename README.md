@@ -11,15 +11,15 @@ chat page for your site or your support team.
 ![ragkit answering questions about a coffee shop's refund and shipping policies](docs/screenshot.png)
 
 *The demo above runs on a fictional coffee roaster's docs that ship with this
-repo, with no API key — it shows the matching passages. Add a Claude API key
-and it writes a short answer in plain English, citing those same sources.*
+repo. Written answers come from Claude or a free local model; with neither set
+up, it still works and shows the matching passages.*
 
 ## Why a business would want this
 
 - **Answers only from your documents.** It cites the policy section it used,
   and says so when the answer isn't there instead of making something up.
-- **Private by default.** Runs on your own machine or server; your documents
-  never go anywhere unless you turn on Claude answers.
+- **Private by default.** Runs on your own machine or server. Pair it with a
+  local model and your documents never leave the building.
 - **Cheap to run.** Search is built in and free. Claude answers use a
   low-cost model by default.
 - **Easy to update.** Change a policy file and restart — no retraining.
@@ -35,7 +35,7 @@ You need Python 3.10 or newer. Nothing else to install.
    ```
 2. **Start the chat page with the sample coffee-shop docs**
    ```bash
-   python -m ragkit.web --docs sample_docs/shop
+   python -m ragkit.web --docs sample_docs/shop --title "Ember & Oak Coffee — Help Center"
    ```
 3. **Open http://127.0.0.1:8000** and ask *"Can I get my money back?"* or
    *"Is shipping free?"*
@@ -48,6 +48,7 @@ Press `Ctrl+C` in the terminal to stop it.
 | Want | Do this |
 |---|---|
 | Written answers from Claude | `pip install anthropic` and set `ANTHROPIC_API_KEY` |
+| Written answers, fully private | Point `RAGKIT_LLM_URL` at any OpenAI-compatible local server (Ollama, llama.cpp, LM Studio), e.g. `http://127.0.0.1:11434/v1`, and set `RAGKIT_LLM_MODEL` |
 | Read PDF files | `pip install pypdf` |
 | Read Word (.docx) files | `pip install python-docx` |
 
@@ -81,8 +82,10 @@ load_docs → chunk_documents → Retriever.search → answer
   and a small, editable synonym map (`ragkit.retriever.SYNONYMS`) so customer
   wording ("money back") matches policy wording ("refund"). The only method
   callers depend on is `search`, so an embedding retriever drops straight in.
-- **Answer** — Claude answers *only* from the retrieved passages and cites
-  them; with no key set, ragkit returns the ranked passages instead.
+- **Answer** — Claude (or a local OpenAI-compatible model via `RAGKIT_LLM_URL`)
+  answers *only* from the retrieved passages and cites them; with neither,
+  ragkit returns the ranked passages instead. `RAGKIT_LLM_EXTRA` passes
+  server-specific JSON (e.g. to switch off a reasoning model's thinking).
 
 ### Web UI
 
