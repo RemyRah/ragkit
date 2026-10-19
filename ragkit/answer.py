@@ -7,8 +7,11 @@ context itself — so the demo is useful (and honest) with zero setup.
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import textwrap
+import urllib.request
 
 from .retriever import Hit
 
@@ -22,6 +25,7 @@ SYSTEM_PROMPT = textwrap.dedent(
     - If the answer is not in the context, say so plainly. Do not invent facts.
     - Cite the sources you used by their [n] marker inline.
     - Be concise and direct.
+    - Plain text only, no Markdown formatting (no **bold** or headings). Use "- " for lists.
     """
 ).strip()
 
@@ -33,28 +37,21 @@ def _format_context(hits: list[Hit]) -> str:
     return "\n\n".join(blocks)
 
 
-def answer_question(question: str, hits: list[Hit], model: str | None = None) -> str:
-    """Compose an answer from the retrieved hits, using Claude when available."""
+def synthesize(question: str, hits: list[Hit], model: str | None = None) -> tuple[str | None, str]:
+    """Ask Claude for a cited answer. Returns (answer, note).
 
-    if not hits:
-        return "No relevant context found in the indexed documents."
+    `answer` is None when Claude isn't available; `note` then says why, so
+    callers can fall back to showing the retrieved passages.
+    """
 
-    context = _format_context(hits)
-
+    if not os.environ.get("ANTHROPIC_API_KEY") and os.environ.get("RAGKIT_LLM_URL"):
+        return _synthesize_local(question, hits)
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        return (
-            "No ANTHROPIC_API_KEY set — returning the retrieved context instead "
-            "of a synthesized answer.\n\n"
-            f"Question: {question}\n\nMost relevant passages:\n\n{context}"
-        )
-
+        return None, "No ANTHROPIC_API_KEY set — showing the most relevant passages instead."
     try:
         import anthropic
     except ImportError:
-        return (
-            "The `anthropic` package is not installed (pip install anthropic).\n\n"
-            f"Retrieved context:\n\n{context}"
-        )
+        return None, "The `anthropic` package is not installed (pip install anthropic)."
 
     client = anthropic.Anthropic()
     resp = client.messages.create(
@@ -64,12 +61,54 @@ def answer_question(question: str, hits: list[Hit], model: str | None = None) ->
         messages=[
             {
                 "role": "user",
-                "content": f"Context passages:\n\n{context}\n\nQuestion: {question}",
+                "content": f"Context passages:\n\n{_format_context(hits)}\n\nQuestion: {question}",
             }
         ],
     )
     parts = [block.text for block in resp.content if getattr(block, "type", None) == "text"]
-    answer = "\n".join(parts).strip()
+    return "\n".join(parts).strip(), f"Answered by {model or DEFAULT_MODEL}."
+
+
+def _synthesize_local(question: str, hits: list[Hit]) -> tuple[str | None, str]:
+    """Private mode: any OpenAI-compatible server (llama.cpp, Ollama, LM Studio,
+    vLLM) at RAGKIT_LLM_URL, e.g. http://127.0.0.1:11434/v1. Stdlib only — the
+    documents never leave the machine."""
+    base = os.environ["RAGKIT_LLM_URL"].rstrip("/")
+    model = os.environ.get("RAGKIT_LLM_MODEL", "local")
+    body = json.dumps({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Context passages:\n\n{_format_context(hits)}\n\nQuestion: {question}"},
+        ],
+        "max_tokens": 700,
+        "temperature": 0.2,
+        # Server-specific knobs, e.g. '{"chat_template_kwargs": {"enable_thinking": false}}'
+        # to stop a reasoning model spending its whole budget thinking.
+        **json.loads(os.environ.get("RAGKIT_LLM_EXTRA", "{}")),
+    }).encode()
+    req = urllib.request.Request(f"{base}/chat/completions", body, {"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            text = json.loads(r.read())["choices"][0]["message"]["content"]
+    except (OSError, KeyError, ValueError) as e:
+        return None, f"Local model at {base} unavailable ({type(e).__name__}) — showing passages instead."
+    text = re.sub(r"<think>.*?</think>", "", text or "", flags=re.S).strip()
+    if not text:
+        return None, f"Local model {model} returned no answer — showing passages instead."
+    return text, f"Answered privately by local model {model}."
+
+
+def answer_question(question: str, hits: list[Hit], model: str | None = None) -> str:
+    """Compose an answer from the retrieved hits, using Claude when available."""
+
+    if not hits:
+        return "No relevant context found in the indexed documents."
+
+    context = _format_context(hits)
+    answer, note = synthesize(question, hits, model)
+    if answer is None:
+        return f"{note}\n\nQuestion: {question}\n\nMost relevant passages:\n\n{context}"
 
     sources = "\n".join(f"[{i}] {h.chunk.citation}" for i, h in enumerate(hits, start=1))
     return f"{answer}\n\nSources:\n{sources}"

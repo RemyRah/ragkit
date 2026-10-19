@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+        extras: ["none", "all"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          pip install pytest
+          if [ "${{ matrix.extras }}" = "all" ]; then pip install pypdf python-docx; fi
+      - name: Test
+        run: python -m pytest -q
+      - name: CLI smoke (zero-install path)
+        run: python cli.py --docs sample_docs/shop "can I get my money back?" | grep -q "returns-and-refunds"

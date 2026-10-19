@@ -21,11 +21,54 @@ _TOKEN_RE = re.compile(r"[a-z0-9]+")
 _STOPWORDS = {
     "the", "a", "an", "and", "or", "of", "to", "in", "is", "are", "for",
     "on", "with", "as", "at", "by", "it", "this", "that", "be", "from",
+    # Conversational filler from customer questions.
+    "i", "me", "my", "you", "your", "we", "our", "do", "does", "can", "will",
+    "what", "whats", "how", "have", "get", "if", "there", "any",
 }
 
 
+# How customers ask vs. how policies are written. Each key (a word or phrase
+# found in the query) adds its terms to the query. Small and editable on purpose:
+# add your own business's vocabulary here.
+SYNONYMS: dict[str, list[str]] = {
+    "money back": ["refund"],
+    "reimburse": ["refund"],
+    "send back": ["return"],
+    "exchange": ["return", "replacement"],
+    "cancel": ["cancel", "refund"],
+    "delivered": ["ship", "delivery"],
+    "arrive": ["ship", "delivery"],
+    "postage": ["shipping"],
+    "price": ["cost"],
+    "cost": ["price"],
+    "broken": ["damaged"],
+    "contact": ["email"],
+}
+
+
+def stem(word: str) -> str:
+    """Very light suffix stripping so 'refunds'/'refunded'/'refund' match."""
+
+    for suffix in ("ing", "ed", "es", "s"):
+        if len(word) > len(suffix) + 2 and word.endswith(suffix):
+            word = word[: -len(suffix)]
+            # 'shipping' -> 'shipp' -> 'ship'
+            if len(word) > 3 and word[-1] == word[-2] and word[-1] not in "lsz":
+                word = word[:-1]
+            break
+    return word
+
+
 def tokenize(text: str) -> list[str]:
-    return [t for t in _TOKEN_RE.findall(text.lower()) if t not in _STOPWORDS]
+    return [stem(t) for t in _TOKEN_RE.findall(text.lower()) if t not in _STOPWORDS]
+
+
+def expand_query(query: str) -> str:
+    """Append synonym terms for any SYNONYMS key that appears in `query`."""
+
+    padded = " " + " ".join(_TOKEN_RE.findall(query.lower())) + " "
+    extra = [t for key, terms in SYNONYMS.items() if f" {key} " in padded for t in terms]
+    return " ".join([query, *extra])
 
 
 @dataclass
@@ -37,11 +80,13 @@ class Hit:
 class Retriever:
     """TF-IDF over chunks with cosine similarity ranking."""
 
-    def __init__(self, chunks: list[Chunk]):
+    def __init__(self, chunks: list[Chunk], expand: bool = True):
         if not chunks:
             raise ValueError("Retriever needs at least one chunk to index.")
         self.chunks = chunks
-        self._doc_tokens = [tokenize(c.text) for c in chunks]
+        self.expand = expand
+        # Index the section heading too: it's often the best summary of the chunk.
+        self._doc_tokens = [tokenize(f"{c.heading}\n{c.text}") for c in chunks]
         self._idf = self._compute_idf(self._doc_tokens)
         self._vectors = [self._vectorize(toks) for toks in self._doc_tokens]
         self._norms = [math.sqrt(sum(w * w for w in v.values())) for v in self._vectors]
@@ -65,7 +110,7 @@ class Retriever:
     def search(self, query: str, k: int = 4) -> list[Hit]:
         """Return the top-`k` chunks most similar to `query`, best first."""
 
-        q_tokens = tokenize(query)
+        q_tokens = tokenize(expand_query(query) if self.expand else query)
         q_vec = self._vectorize(q_tokens)
         q_norm = math.sqrt(sum(w * w for w in q_vec.values()))
         if q_norm == 0:
