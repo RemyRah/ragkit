@@ -1,5 +1,7 @@
 # ragkit runs with ZERO dependencies for retrieval (pure standard library).
-# These are optional, only needed for the extras noted below.
+# Everything below is optional; install only the extras you need.
 
-anthropic>=0.40    # optional: Claude-synthesized answers (needs ANTHROPIC_API_KEY)
-pytest>=8.0        # optional: running the test suite
+anthropic>=0.40       # optional: Claude-synthesized answers (needs ANTHROPIC_API_KEY)
+pypdf>=4.0            # optional: read .pdf files
+python-docx>=1.1      # optional: read .docx files
+pytest>=8.0           # optional: running the test suite

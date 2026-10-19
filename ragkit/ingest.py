@@ -8,11 +8,57 @@ boundary still lands whole in at least one chunk.
 from __future__ import annotations
 
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
 # Files we know how to read as plain text.
 TEXT_SUFFIXES = {".md", ".markdown", ".txt", ".rst"}
+
+
+class MissingExtra(Exception):
+    """Raised by a reader whose optional dependency isn't installed."""
+
+    def __init__(self, package: str):
+        super().__init__(package)
+        self.package = package
+
+
+def _read_pdf(path: Path) -> str:
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        raise MissingExtra("pypdf") from None
+    return "\n\n".join((page.extract_text() or "") for page in PdfReader(path).pages)
+
+
+def _read_docx(path: Path) -> str:
+    try:
+        import docx
+    except ImportError:
+        raise MissingExtra("python-docx") from None
+    lines = []
+    for para in docx.Document(path).paragraphs:
+        style = para.style.name if para.style is not None else ""
+        # Keep Word headings as Markdown headings so chunking/citations use them.
+        if style.startswith("Heading") and style[-1:].isdigit():
+            lines.append("#" * int(style[-1]) + " " + para.text)
+        else:
+            lines.append(para.text)
+    return "\n\n".join(lines)
+
+
+def _missing_reader(package: str):
+    """A reader that always reports `package` as missing (handy for tests)."""
+
+    def read(path: Path) -> str:
+        raise MissingExtra(package)
+
+    return read
+
+
+# Binary formats, each behind an optional extra.
+READERS = {".pdf": _read_pdf, ".docx": _read_docx}
 
 
 @dataclass
@@ -40,7 +86,11 @@ class Chunk:
 
 
 def load_docs(path: str | Path) -> list[Document]:
-    """Load every supported text file under `path` (file or directory)."""
+    """Load every supported file under `path` (file or directory).
+
+    Text/Markdown always load; PDF and DOCX load when their optional extras
+    (pypdf, python-docx) are installed, otherwise they are skipped with a warning.
+    """
 
     root = Path(path)
     if not root.exists():
@@ -51,13 +101,25 @@ def load_docs(path: str | Path) -> list[Document]:
         files = [root]
     else:
         files = sorted(
-            p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in TEXT_SUFFIXES
+            p
+            for p in root.rglob("*")
+            if p.is_file() and (p.suffix.lower() in TEXT_SUFFIXES or p.suffix.lower() in READERS)
         )
 
     docs: list[Document] = []
+    warned: set[str] = set()
     for f in files:
         try:
-            text = f.read_text(encoding="utf-8")
+            reader = READERS.get(f.suffix.lower())
+            text = reader(f) if reader else f.read_text(encoding="utf-8")
+        except MissingExtra as e:
+            if e.package not in warned:
+                warned.add(e.package)
+                print(
+                    f"ragkit: skipping {f.suffix} files — run `pip install {e.package}` to read them.",
+                    file=sys.stderr,
+                )
+            continue
         except UnicodeDecodeError:
             # Skip binaries that slipped through; a real deployment would log this.
             continue
