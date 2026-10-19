@@ -47,7 +47,7 @@ def synthesize(question: str, hits: list[Hit], model: str | None = None) -> tupl
     if not os.environ.get("ANTHROPIC_API_KEY") and os.environ.get("RAGKIT_LLM_URL"):
         return _synthesize_local(question, hits)
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        return None, "No ANTHROPIC_API_KEY set — showing the most relevant passages instead."
+        return None, "No language model connected — showing the most relevant passages, with sources."
     try:
         import anthropic
     except ImportError:
