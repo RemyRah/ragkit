@@ -3,6 +3,8 @@
 [![CI](https://github.com/RemyRah/ragkit/actions/workflows/ci.yml/badge.svg)](https://github.com/RemyRah/ragkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+**▶ [Try it live in your browser](https://huggingface.co/spaces/RemyRah/ragkit-demo)** — no install, no signup. Ask a sample coffee shop's policies a question; every answer shows its source.
+
 **Your customers ask "can I get my money back?" — ragkit finds the answer in
 your refund policy and shows exactly where it came from.** Drop in your FAQ,
 policies and product sheets (Markdown, text, PDF or Word) and get a private
