@@ -122,7 +122,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     title = args.title or f"Ask {Path(args.docs).name}"
     server = make_server(Retriever(chunk_documents(docs)), title=title, port=args.port)
-    print(f"ragkit: {len(docs)} documents indexed. Open http://127.0.0.1:{server.server_address[1]}")
+    print(f"ragkit: {len(docs)} documents indexed. Open http://127.0.0.1:{server.server_address[1]}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
