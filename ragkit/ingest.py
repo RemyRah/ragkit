@@ -124,7 +124,12 @@ def load_docs(path: str | Path) -> list[Document]:
                 )
             continue
         except UnicodeDecodeError:
-            # Skip binaries that slipped through; a real deployment would log this.
+            # Never drop a source silently: the index would look complete while
+            # missing a document the user expects to be searchable.
+            print(
+                f"ragkit: skipping {f} — not valid UTF-8 text (re-save it as UTF-8 to index it).",
+                file=sys.stderr,
+            )
             continue
         if text.strip():
             docs.append(Document(source=str(f), text=text))

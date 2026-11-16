@@ -48,3 +48,12 @@ def test_pdf_chunks_cite_page_numbers():
     from ragkit import chunk_documents
     chunks = chunk_documents(load_docs(SHOP / "brewing-guide.pdf"))
     assert chunks and all(c.heading.startswith("Page ") for c in chunks)
+
+
+def test_non_utf8_text_file_is_skipped_loudly(tmp_path, capsys):
+    (tmp_path / "latin1.txt").write_bytes("caf\xe9 hours: 7am".encode("latin-1"))
+    (tmp_path / "ok.md").write_text("plain markdown still loads")
+    docs = load_docs(tmp_path)
+    assert [Path(d.source).name for d in docs] == ["ok.md"]
+    err = capsys.readouterr().err
+    assert "latin1.txt" in err and "UTF-8" in err
