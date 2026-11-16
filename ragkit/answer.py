@@ -15,9 +15,12 @@ import urllib.request
 
 from .retriever import Hit
 
-# Cheap by default — this is a demo, not a production judge. Override with
-# RAGKIT_MODEL. See https://docs.anthropic.com for current model ids.
-DEFAULT_MODEL = os.environ.get("RAGKIT_MODEL", "claude-haiku-4-5")
+# Override with RAGKIT_MODEL (any current Claude model id).
+# See https://docs.anthropic.com for current model ids.
+DEFAULT_MODEL = os.environ.get("RAGKIT_MODEL", "claude-opus-5-5")
+# Current Claude models think before answering and thinking counts against
+# max_tokens; leave room so the cited answer isn't cut off.
+MAX_TOKENS = 4096
 
 SYSTEM_PROMPT = textwrap.dedent(
     """
@@ -53,10 +56,11 @@ def synthesize(question: str, hits: list[Hit], model: str | None = None) -> tupl
     except ImportError:
         return None, "The `anthropic` package is not installed (pip install anthropic)."
 
+    model = model or DEFAULT_MODEL
     client = anthropic.Anthropic()
     resp = client.messages.create(
-        model=model or DEFAULT_MODEL,
-        max_tokens=700,
+        model=model,
+        max_tokens=MAX_TOKENS,
         system=SYSTEM_PROMPT,
         messages=[
             {
@@ -65,8 +69,18 @@ def synthesize(question: str, hits: list[Hit], model: str | None = None) -> tupl
             }
         ],
     )
+    # Never show a refused, truncated, or empty (thinking-only) answer as if it
+    # were complete: fall back to the retrieved passages instead.
+    stop = getattr(resp, "stop_reason", None)
+    if stop == "refusal":
+        return None, f"{model} declined to answer — showing the most relevant passages instead."
+    if stop == "max_tokens":
+        return None, f"{model}'s answer was cut off — showing the most relevant passages instead."
     parts = [block.text for block in resp.content if getattr(block, "type", None) == "text"]
-    return "\n".join(parts).strip(), f"Answered by {model or DEFAULT_MODEL}."
+    text = "\n".join(parts).strip()
+    if not text:
+        return None, f"{model} returned no answer — showing the most relevant passages instead."
+    return text, f"Answered by {model}."
 
 
 def _synthesize_local(question: str, hits: list[Hit]) -> tuple[str | None, str]:

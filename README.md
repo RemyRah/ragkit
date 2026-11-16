@@ -98,7 +98,7 @@ serves one page on `127.0.0.1` using only `http.server`:
 - `POST /api/ask` with `{"question": "..."}` → `{"answer", "note", "sources"}`
 
 All document and user text is HTML-escaped on the server, and the page script
-only inserts text via `textContent`. The model defaults to `claude-haiku-4-5`;
+only inserts text via `textContent`. The model defaults to `claude-opus-5-5`;
 override with `RAGKIT_MODEL`. It binds to localhost only — put it behind a
 reverse proxy with auth before exposing it publicly.
 
