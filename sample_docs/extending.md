@@ -11,8 +11,8 @@ nothing else in the pipeline needs to change.
 ## How to change the answer model
 
 Set the `RAGKIT_MODEL` environment variable to any current Claude model id.
-The default is a small, cheap model because this is a demo, not a production
-grader. For higher-stakes synthesis, point it at a larger model.
+The default is `claude-opus-5-5`. For high-volume or cost-sensitive use, point
+it at a smaller model.
 
 ## Tuning chunk size
 

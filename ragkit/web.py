@@ -7,7 +7,7 @@ GET /            the chat page (also answers ?q=... server-side, so it works wit
 POST /api/ask    {"question": "..."} -> {"answer", "note", "sources": [...]}
 
 Uses Claude when ANTHROPIC_API_KEY is set (model: RAGKIT_MODEL, default
-claude-haiku-4-5); otherwise it shows the most relevant passages. Everything
+claude-opus-5-5); otherwise it shows the most relevant passages. Everything
 user- or document-derived is HTML-escaped on the server, and the page's script
 only ever inserts text via textContent.
 """
