@@ -134,6 +134,8 @@ python -m pytest -q
 
 CI runs the suite on Python 3.10–3.12, with and without the optional extras.
 
+Run the tests before opening a pull request; changes to `main` are reviewed before merge.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
